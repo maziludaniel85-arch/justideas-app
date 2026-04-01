@@ -6,6 +6,10 @@
  * OpenAPI spec version: 0.2.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface UpdatePasBody {
+  /**
+   * @minimum 1
+   * @maximum 6
+   */
+  pas: number;
 }

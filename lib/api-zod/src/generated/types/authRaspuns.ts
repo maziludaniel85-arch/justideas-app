@@ -5,7 +5,9 @@
  * JustIdeas - Platforma de Înregistrare Firme din România
  * OpenAPI spec version: 0.2.0
  */
+import type { Utilizator } from "./utilizator";
 
-export interface HealthStatus {
-  status: string;
+export interface AuthRaspuns {
+  token: string;
+  utilizator: Utilizator;
 }

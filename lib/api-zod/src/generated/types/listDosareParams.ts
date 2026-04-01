@@ -5,7 +5,9 @@
  * JustIdeas - Platforma de Înregistrare Firme din România
  * OpenAPI spec version: 0.2.0
  */
+import type { ListDosareStatus } from "./listDosareStatus";
 
-export interface HealthStatus {
-  status: string;
-}
+export type ListDosareParams = {
+  status?: ListDosareStatus;
+  cautare?: string;
+};

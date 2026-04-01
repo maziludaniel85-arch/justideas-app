@@ -6,6 +6,10 @@
  * OpenAPI spec version: 0.2.0
  */
 
-export interface HealthStatus {
-  status: string;
-}
+export type DosarStatisticiPeStatus = {
+  ciorna: number;
+  in_asteptare: number;
+  in_procesare: number;
+  aprobat: number;
+  respins: number;
+};

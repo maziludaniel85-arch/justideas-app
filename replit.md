@@ -1,108 +1,138 @@
-# Workspace
+# JustIdeas — Platformă de Înregistrare Firme (România)
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+REST API backend for JustIdeas — a Romanian company registration platform. Built with Node.js/Express, TypeScript, Drizzle ORM, and PostgreSQL (hosted on Railway).
 
-## Stack
+## Architecture
 
-- **Monorepo tool**: pnpm workspaces
-- **Node.js version**: 24
-- **Package manager**: pnpm
-- **TypeScript version**: 5.9
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+### Monorepo (pnpm workspaces)
 
-## Structure
-
-```text
-artifacts-monorepo/
-├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
-├── lib/                    # Shared libraries
-│   ├── api-spec/           # OpenAPI spec + Orval codegen config
-│   ├── api-client-react/   # Generated React Query hooks
-│   ├── api-zod/            # Generated Zod schemas from OpenAPI
-│   └── db/                 # Drizzle ORM schema + DB connection
-├── scripts/                # Utility scripts (single workspace package)
-│   └── src/                # Individual .ts scripts, run via `pnpm --filter @workspace/scripts run <script>`
-├── pnpm-workspace.yaml     # pnpm workspace (artifacts/*, lib/*, lib/integrations/*, scripts)
-├── tsconfig.base.json      # Shared TS options (composite, bundler resolution, es2022)
-├── tsconfig.json           # Root TS project references
-└── package.json            # Root package with hoisted devDeps
+```
+lib/
+  api-spec/     — OpenAPI 3.1 YAML spec + Orval codegen config
+  api-zod/      — Generated Zod schemas & React Query hooks (from codegen)
+  db/           — Drizzle ORM schema + DB connection
+scripts/        — Utility scripts (CAEN seed, etc.)
+artifacts/
+  api-server/   — Express API server (main artifact)
 ```
 
-## TypeScript & Composite Projects
+### Database: Railway PostgreSQL
+- Connection via `EXTERNAL_DATABASE_URL` env var (shared)
+- Falls back to `DATABASE_URL` (Replit managed)
+- SSL enabled (`rejectUnauthorized: false`)
 
-Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references. This means:
+### Authentication
+- JWT tokens (7-day expiry), signed with `JWT_SECRET` env var
+- bcryptjs for password hashing (12 rounds)
+- `Authorization: Bearer <token>` header required for protected routes
 
-- **Always typecheck from the root** — run `pnpm run typecheck` (which runs `tsc --build --emitDeclarationOnly`). This builds the full dependency graph so that cross-package imports resolve correctly. Running `tsc` inside a single package will fail if its dependencies haven't been built yet.
-- **`emitDeclarationOnly`** — we only emit `.d.ts` files during typecheck; actual JS bundling is handled by esbuild/tsx/vite...etc, not `tsc`.
-- **Project references** — when package A depends on package B, A's `tsconfig.json` must list B in its `references` array. `tsc --build` uses this to determine build order and skip up-to-date packages.
+## API Endpoints (all under `/api`)
 
-## Root Scripts
+### Auth (`/auth`)
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/auth/inregistrare` | Register new user |
+| POST | `/auth/autentificare` | Login |
+| GET | `/auth/profil` | Get profile (auth required) |
+| PATCH | `/auth/profil` | Update profile (auth required) |
 
-- `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages that define it
-- `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
+### Dosare — Company Registration Files (`/dosare`)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/dosare` | List user's files |
+| POST | `/dosare` | Create new file |
+| GET | `/dosare/statistici` | Dashboard statistics |
+| GET | `/dosare/:id` | Get file details (includes asociati + plati) |
+| PATCH | `/dosare/:id` | Update file |
+| DELETE | `/dosare/:id` | Delete file |
+| PATCH | `/dosare/:id/pas` | Update wizard step (1-6) |
+| POST | `/dosare/:id/trimite` | Submit file for processing |
 
-## JustIdeas — Romanian Company Registration Platform
+### Asociați — Shareholders (`/dosare/:id/asociati`)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/dosare/:id/asociati` | List shareholders |
+| POST | `/dosare/:id/asociati` | Add shareholder |
+| PATCH | `/dosare/:id/asociati/:asociatId` | Update shareholder |
+| DELETE | `/dosare/:id/asociati/:asociatId` | Remove shareholder |
 
-The API server implements a full company registration backend for Romanian companies. Key domains:
+### Coduri CAEN (`/coduri-caen`)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/coduri-caen` | List/search CAEN codes (paginated) |
+| GET | `/coduri-caen/:cod` | Get specific CAEN code |
 
-- **Companies** — CRUD for companies with legal forms (SRL, SA, SNC, SCS, RA, SRL_D), CUI, CAEN codes, share capital, status lifecycle (draft → pending → registered/rejected)
-- **Shareholders (Asociați)** — manage shareholders per company (natural/legal persons, CNP, shares, contribution)
-- **Directors (Administratori)** — manage directors per company (role: administrator, cenzor, auditor, asociat_unic, mandate dates)
-- **Documents** — track registration documents by type (act_constitutiv, cazier_fiscal, etc.), status (pending/uploaded/approved/rejected)
-- **Registration Requests** — manage submission workflow with status transitions (draft → submitted → approved/rejected), with side effects on company status
+### Plăți — Payments (`/plati`)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/plati` | List user's payments |
+| POST | `/plati` | Create payment |
+| GET | `/plati/:id` | Get payment details |
+| PATCH | `/plati/:id` | Update payment status |
 
-All routes live under `/api`. The OpenAPI spec in `lib/api-spec/openapi.yaml` is the source of truth.
+## Database Schema (Railway PostgreSQL)
 
-## Packages
+### `utilizatori` — Users
+- id, email (unique), parola (bcrypt hash), nume, prenume, telefon
+- rol: `client` | `admin`
 
-### `artifacts/api-server` (`@workspace/api-server`)
+### `dosare` — Company Registration Files
+- id, utilizator_id (FK), denumire_firma, forma_juridica
+- Wizard fields: judet, localitate, adresa_sediu, cod_postal, cod_caen_principal, descriere_activitate
+- Capital: capital_social, numar_parti, valoare_parte
+- Status: `ciorna` → `in_asteptare` → `in_procesare` → `aprobat` | `respins`
+- pas_curent: 1–6 (wizard steps)
+- cui, numar_inregistrare (set after approval)
 
-Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
+### `asociati` — Shareholders
+- id, dosar_id (FK), nume_complet, cnp, tip_act_identitate
+- nationalitate, adresa, numar_parti, procent_detinere, aport_capital
+- este_persoana_juridica, cui_persoana_juridica
 
-- Entry: `src/index.ts` — reads `PORT`, starts Express
-- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
-- Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
-- Depends on: `@workspace/db`, `@workspace/api-zod`
-- `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
-- Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
+### `coduri_caen` — CAEN Reference Data
+- cod (PK), denumire, sectiune, diviziune, grupa, clasa
+- Pre-seeded with 264 codes (`pnpm --filter @workspace/scripts run seed-caen`)
 
-### `lib/db` (`@workspace/db`)
+### `plati` — Payments
+- id, dosar_id (FK), utilizator_id (FK), suma, valuta (RON default)
+- status: `in_asteptare` | `platit` | `esuat` | `rambursat`
+- metoda_plata: `card` | `transfer_bancar` | `numerar`
+- referinta_plata, descriere, data_plata
 
-Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client instance and schema models.
+## Environment Variables
 
-- `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
-- `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas (no models definitions exist right now)
-- `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
-- Exports: `.` (pool, db, schema), `./schema` (schema only)
+| Variable | Description |
+|----------|-------------|
+| `EXTERNAL_DATABASE_URL` | Railway PostgreSQL connection string |
+| `JWT_SECRET` | JWT signing secret |
+| `PORT` | Server port (default 8080) |
 
-Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`, and we fallback to `pnpm --filter @workspace/db run push-force`.
+## Development Commands
 
-### `lib/api-spec` (`@workspace/api-spec`)
+```bash
+# Build lib packages (needed for TypeScript project references)
+pnpm --filter @workspace/db exec tsc -p tsconfig.json
+pnpm --filter @workspace/api-zod exec tsc -p tsconfig.json
 
-Owns the OpenAPI 3.1 spec (`openapi.yaml`) and the Orval config (`orval.config.ts`). Running codegen produces output into two sibling packages:
+# Push schema to Railway
+EXTERNAL_DATABASE_URL="..." pnpm --filter @workspace/db run push-force
 
-1. `lib/api-client-react/src/generated/` — React Query hooks + fetch client
-2. `lib/api-zod/src/generated/` — Zod schemas
+# Seed CAEN codes
+EXTERNAL_DATABASE_URL="..." pnpm --filter @workspace/scripts run seed-caen
 
-Run codegen: `pnpm --filter @workspace/api-spec run codegen`
+# Typecheck
+pnpm --filter @workspace/api-server run typecheck
 
-### `lib/api-zod` (`@workspace/api-zod`)
+# Regenerate Zod schemas from OpenAPI spec
+pnpm --filter @workspace/api-spec run codegen
+```
 
-Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used by `api-server` for response validation.
+## Key Design Decisions
 
-### `lib/api-client-react` (`@workspace/api-client-react`)
-
-Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
-
-### `scripts` (`@workspace/scripts`)
-
-Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+- All responses use Romanian field names (`eroare` not `error`, `creatLa` not `createdAt`)
+- Admins see all data; regular users see only their own dosare/plati
+- `numeric` DB columns converted to `Number()` at API boundary
+- bcrypt hash rounds: 12 (production-suitable)
+- JWT expiry: 7 days

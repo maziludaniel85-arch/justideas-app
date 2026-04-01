@@ -24,3 +24,9 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[userenv]
+
+[userenv.shared]
+EXTERNAL_DATABASE_URL = "postgresql://postgres:wcazKAUVQMENsMzqkoMMSxaGhPunqJCP@interchange.proxy.rlwy.net:33789/railway"
+JWT_SECRET = "justideas-jwt-secret-2026-romanesc"

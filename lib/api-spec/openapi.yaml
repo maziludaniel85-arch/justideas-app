@@ -1,118 +1,260 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
-  description: JustIdeas - Romanian Company Registration Platform API
+  version: 0.2.0
+  description: JustIdeas - Platforma de Înregistrare Firme din România
 servers:
   - url: /api
-    description: Base API path
+    description: Calea de bază a API-ului
 tags:
   - name: health
-    description: Health operations
-  - name: companies
-    description: Company management
-  - name: shareholders
-    description: Shareholder management
-  - name: directors
-    description: Director management
-  - name: documents
-    description: Document management
-  - name: registrations
-    description: Registration request management
+    description: Stare server
+  - name: auth
+    description: Autentificare și înregistrare utilizatori
+  - name: dosare
+    description: Dosare de înregistrare firme
+  - name: asociati
+    description: Asociați și acționari
+  - name: coduri-caen
+    description: Coduri CAEN (clasificare activități)
+  - name: plati
+    description: Plăți și facturare
 
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
-      summary: Health check
-      description: Returns server health status
+      summary: Verificare stare
       responses:
         "200":
-          description: Healthy
+          description: Server funcțional
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
-  # ── Companies ──────────────────────────────────────────────────────────────
-  /companies:
+  # ── Autentificare ──────────────────────────────────────────────────────────
+  /auth/inregistrare:
+    post:
+      operationId: inregistrareUtilizator
+      tags: [auth]
+      summary: Înregistrare utilizator nou
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InregistrareBody"
+      responses:
+        "201":
+          description: Utilizator înregistrat cu succes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthRaspuns"
+        "400":
+          description: Date invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRaspuns"
+        "409":
+          description: Email deja înregistrat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRaspuns"
+
+  /auth/autentificare:
+    post:
+      operationId: autentificareUtilizator
+      tags: [auth]
+      summary: Autentificare utilizator
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AutentificareBody"
+      responses:
+        "200":
+          description: Autentificare reușită
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthRaspuns"
+        "401":
+          description: Credențiale invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRaspuns"
+
+  /auth/profil:
     get:
-      operationId: listCompanies
-      tags: [companies]
-      summary: List all companies
+      operationId: getProfil
+      tags: [auth]
+      summary: Obține profilul utilizatorului autentificat
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Profil utilizator
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Utilizator"
+        "401":
+          description: Neautentificat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRaspuns"
+    patch:
+      operationId: updateProfil
+      tags: [auth]
+      summary: Actualizează profilul utilizatorului
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfilBody"
+      responses:
+        "200":
+          description: Profil actualizat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Utilizator"
+        "401":
+          description: Neautentificat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRaspuns"
+
+  # ── Dosare ─────────────────────────────────────────────────────────────────
+  /dosare:
+    get:
+      operationId: listDosare
+      tags: [dosare]
+      summary: Listează dosarele utilizatorului curent
+      security:
+        - BearerAuth: []
       parameters:
         - name: status
           in: query
           required: false
           schema:
             type: string
-            enum: [draft, pending, registered, rejected]
-        - name: search
+            enum: [ciorna, in_asteptare, in_procesare, aprobat, respins]
+        - name: cautare
           in: query
           required: false
           schema:
             type: string
       responses:
         "200":
-          description: List of companies
+          description: Lista dosarelor
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Company"
+                  $ref: "#/components/schemas/Dosar"
+        "401":
+          description: Neautentificat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRaspuns"
 
     post:
-      operationId: createCompany
-      tags: [companies]
-      summary: Create a new company
+      operationId: createDosar
+      tags: [dosare]
+      summary: Creează un dosar nou
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateCompanyBody"
+              $ref: "#/components/schemas/CreateDosarBody"
       responses:
         "201":
-          description: Company created
+          description: Dosar creat
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Company"
+                $ref: "#/components/schemas/Dosar"
         "400":
-          description: Invalid input
+          description: Date invalide
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ErrorRaspuns"
+        "401":
+          description: Neautentificat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRaspuns"
 
-  /companies/{id}:
+  /dosare/statistici:
     get:
-      operationId: getCompany
-      tags: [companies]
-      summary: Get a company by ID
+      operationId: getDosareStatistici
+      tags: [dosare]
+      summary: Statistici dosare (pentru dashboard)
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Statistici dosare
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DosarStatistici"
+        "401":
+          description: Neautentificat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRaspuns"
+
+  /dosare/{id}:
+    get:
+      operationId: getDosar
+      tags: [dosare]
+      summary: Obține detaliile unui dosar
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/IdParam"
       responses:
         "200":
-          description: Company found
+          description: Dosar găsit
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CompanyDetail"
+                $ref: "#/components/schemas/DosarDetaliat"
         "404":
-          description: Company not found
+          description: Dosar negăsit
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ErrorRaspuns"
 
     patch:
-      operationId: updateCompany
-      tags: [companies]
-      summary: Update a company
+      operationId: updateDosar
+      tags: [dosare]
+      summary: Actualizează un dosar
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/IdParam"
       requestBody:
@@ -120,84 +262,135 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateCompanyBody"
+              $ref: "#/components/schemas/UpdateDosarBody"
       responses:
         "200":
-          description: Company updated
+          description: Dosar actualizat
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Company"
-        "400":
-          description: Invalid input
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/Dosar"
         "404":
-          description: Company not found
+          description: Dosar negăsit
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ErrorRaspuns"
 
     delete:
-      operationId: deleteCompany
-      tags: [companies]
-      summary: Delete a company
+      operationId: deleteDosar
+      tags: [dosare]
+      summary: Șterge un dosar
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/IdParam"
       responses:
         "204":
-          description: Company deleted
+          description: Dosar șters
         "404":
-          description: Company not found
+          description: Dosar negăsit
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ErrorRaspuns"
 
-  /companies/stats:
-    get:
-      operationId: getCompanyStats
-      tags: [companies]
-      summary: Get dashboard statistics for companies
+  /dosare/{id}/pas:
+    patch:
+      operationId: updatePasDosar
+      tags: [dosare]
+      summary: Avansează pasul curent al dosarului (wizard)
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePasBody"
       responses:
         "200":
-          description: Company statistics
+          description: Pas actualizat
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CompanyStats"
+                $ref: "#/components/schemas/Dosar"
+        "400":
+          description: Pas invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRaspuns"
+        "404":
+          description: Dosar negăsit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRaspuns"
 
-  # ── Shareholders ───────────────────────────────────────────────────────────
-  /companies/{id}/shareholders:
-    get:
-      operationId: listShareholders
-      tags: [shareholders]
-      summary: List shareholders of a company
+  /dosare/{id}/trimite:
+    post:
+      operationId: trimiteDosar
+      tags: [dosare]
+      summary: Trimite dosarul pentru procesare
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/IdParam"
       responses:
         "200":
-          description: List of shareholders
+          description: Dosar trimis cu succes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dosar"
+        "400":
+          description: Dosarul nu poate fi trimis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRaspuns"
+        "404":
+          description: Dosar negăsit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRaspuns"
+
+  # ── Asociați ───────────────────────────────────────────────────────────────
+  /dosare/{id}/asociati:
+    get:
+      operationId: listAsociatiDosar
+      tags: [asociati]
+      summary: Listează asociații unui dosar
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Lista asociaților
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Shareholder"
+                  $ref: "#/components/schemas/Asociat"
         "404":
-          description: Company not found
+          description: Dosar negăsit
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ErrorRaspuns"
 
     post:
-      operationId: addShareholder
-      tags: [shareholders]
-      summary: Add a shareholder to a company
+      operationId: addAsociatDosar
+      tags: [asociati]
+      summary: Adaugă un asociat la dosar
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/IdParam"
       requestBody:
@@ -205,35 +398,37 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateShareholderBody"
+              $ref: "#/components/schemas/CreateAsociatBody"
       responses:
         "201":
-          description: Shareholder added
+          description: Asociat adăugat
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Shareholder"
+                $ref: "#/components/schemas/Asociat"
         "400":
-          description: Invalid input
+          description: Date invalide
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ErrorRaspuns"
         "404":
-          description: Company not found
+          description: Dosar negăsit
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ErrorRaspuns"
 
-  /companies/{id}/shareholders/{shareholderId}:
+  /dosare/{id}/asociati/{asociatId}:
     patch:
-      operationId: updateShareholder
-      tags: [shareholders]
-      summary: Update a shareholder
+      operationId: updateAsociatDosar
+      tags: [asociati]
+      summary: Actualizează un asociat
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/IdParam"
-        - name: shareholderId
+        - name: asociatId
           in: path
           required: true
           schema:
@@ -243,337 +438,203 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateShareholderBody"
+              $ref: "#/components/schemas/UpdateAsociatBody"
       responses:
         "200":
-          description: Shareholder updated
+          description: Asociat actualizat
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Shareholder"
+                $ref: "#/components/schemas/Asociat"
         "404":
-          description: Not found
+          description: Negăsit
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ErrorRaspuns"
 
     delete:
-      operationId: removeShareholder
-      tags: [shareholders]
-      summary: Remove a shareholder from a company
+      operationId: removeAsociatDosar
+      tags: [asociati]
+      summary: Elimină un asociat din dosar
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/IdParam"
-        - name: shareholderId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        "204":
-          description: Shareholder removed
-        "404":
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  # ── Directors ──────────────────────────────────────────────────────────────
-  /companies/{id}/directors:
-    get:
-      operationId: listDirectors
-      tags: [directors]
-      summary: List directors of a company
-      parameters:
-        - $ref: "#/components/parameters/IdParam"
-      responses:
-        "200":
-          description: List of directors
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Director"
-        "404":
-          description: Company not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-    post:
-      operationId: addDirector
-      tags: [directors]
-      summary: Add a director to a company
-      parameters:
-        - $ref: "#/components/parameters/IdParam"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateDirectorBody"
-      responses:
-        "201":
-          description: Director added
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Director"
-        "400":
-          description: Invalid input
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: Company not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  /companies/{id}/directors/{directorId}:
-    patch:
-      operationId: updateDirector
-      tags: [directors]
-      summary: Update a director
-      parameters:
-        - $ref: "#/components/parameters/IdParam"
-        - name: directorId
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateDirectorBody"
-      responses:
-        "200":
-          description: Director updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Director"
-        "404":
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-    delete:
-      operationId: removeDirector
-      tags: [directors]
-      summary: Remove a director from a company
-      parameters:
-        - $ref: "#/components/parameters/IdParam"
-        - name: directorId
+        - name: asociatId
           in: path
           required: true
           schema:
             type: integer
       responses:
         "204":
-          description: Director removed
+          description: Asociat eliminat
         "404":
-          description: Not found
+          description: Negăsit
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ErrorRaspuns"
 
-  # ── Documents ──────────────────────────────────────────────────────────────
-  /companies/{id}/documents:
+  # ── Coduri CAEN ────────────────────────────────────────────────────────────
+  /coduri-caen:
     get:
-      operationId: listDocuments
-      tags: [documents]
-      summary: List documents for a company
+      operationId: listCodurICaen
+      tags: [coduri-caen]
+      summary: Listează și caută coduri CAEN
       parameters:
-        - $ref: "#/components/parameters/IdParam"
-      responses:
-        "200":
-          description: List of documents
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Document"
-        "404":
-          description: Company not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-    post:
-      operationId: addDocument
-      tags: [documents]
-      summary: Add a document to a company
-      parameters:
-        - $ref: "#/components/parameters/IdParam"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateDocumentBody"
-      responses:
-        "201":
-          description: Document added
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Document"
-        "400":
-          description: Invalid input
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: Company not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  /companies/{id}/documents/{documentId}:
-    patch:
-      operationId: updateDocument
-      tags: [documents]
-      summary: Update a document status or metadata
-      parameters:
-        - $ref: "#/components/parameters/IdParam"
-        - name: documentId
-          in: path
-          required: true
+        - name: cautare
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Caută după cod sau denumire
+        - name: sectiune
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filtrare după secțiune CAEN
+        - name: pagina
+          in: query
+          required: false
           schema:
             type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateDocumentBody"
-      responses:
-        "200":
-          description: Document updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Document"
-        "404":
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-    delete:
-      operationId: deleteDocument
-      tags: [documents]
-      summary: Delete a document
-      parameters:
-        - $ref: "#/components/parameters/IdParam"
-        - name: documentId
-          in: path
-          required: true
+        - name: perPagina
+          in: query
+          required: false
           schema:
             type: integer
       responses:
-        "204":
-          description: Document deleted
-        "404":
-          description: Not found
+        "200":
+          description: Lista codurilor CAEN
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/CodCaenPaginat"
 
-  # ── Registration Requests ──────────────────────────────────────────────────
-  /registrations:
+  /coduri-caen/{cod}:
     get:
-      operationId: listRegistrations
-      tags: [registrations]
-      summary: List all registration requests
+      operationId: getCodCaen
+      tags: [coduri-caen]
+      summary: Obține un cod CAEN specific
+      parameters:
+        - name: cod
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Cod CAEN găsit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CodCaen"
+        "404":
+          description: Cod negăsit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRaspuns"
+
+  # ── Plăți ──────────────────────────────────────────────────────────────────
+  /plati:
+    get:
+      operationId: listPlati
+      tags: [plati]
+      summary: Listează plățile utilizatorului
+      security:
+        - BearerAuth: []
       parameters:
         - name: status
           in: query
           required: false
           schema:
             type: string
-            enum: [draft, submitted, under_review, approved, rejected]
-        - name: companyId
+            enum: [in_asteptare, platit, esuat, rambursat]
+        - name: dosarId
           in: query
           required: false
           schema:
             type: integer
       responses:
         "200":
-          description: List of registration requests
+          description: Lista plăților
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/RegistrationRequest"
+                  $ref: "#/components/schemas/Plata"
+        "401":
+          description: Neautentificat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRaspuns"
 
     post:
-      operationId: createRegistration
-      tags: [registrations]
-      summary: Create a registration request
+      operationId: createPlata
+      tags: [plati]
+      summary: Înregistrează o plată nouă
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateRegistrationBody"
+              $ref: "#/components/schemas/CreatePlataBody"
       responses:
         "201":
-          description: Registration request created
+          description: Plată înregistrată
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RegistrationRequest"
+                $ref: "#/components/schemas/Plata"
         "400":
-          description: Invalid input
+          description: Date invalide
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ErrorRaspuns"
+        "401":
+          description: Neautentificat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorRaspuns"
 
-  /registrations/{id}:
+  /plati/{id}:
     get:
-      operationId: getRegistration
-      tags: [registrations]
-      summary: Get a registration request by ID
+      operationId: getPlata
+      tags: [plati]
+      summary: Obține detaliile unei plăți
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/IdParam"
       responses:
         "200":
-          description: Registration request found
+          description: Plată găsită
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RegistrationRequest"
+                $ref: "#/components/schemas/Plata"
         "404":
-          description: Not found
+          description: Plată negăsită
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ErrorRaspuns"
 
     patch:
-      operationId: updateRegistration
-      tags: [registrations]
-      summary: Update a registration request
+      operationId: updatePlata
+      tags: [plati]
+      summary: Actualizează statusul unei plăți
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/IdParam"
       requestBody:
@@ -581,137 +642,28 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateRegistrationBody"
+              $ref: "#/components/schemas/UpdatePlataBody"
       responses:
         "200":
-          description: Registration updated
+          description: Plată actualizată
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RegistrationRequest"
-        "400":
-          description: Invalid input
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/Plata"
         "404":
-          description: Not found
+          description: Plată negăsită
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-    delete:
-      operationId: deleteRegistration
-      tags: [registrations]
-      summary: Delete a registration request
-      parameters:
-        - $ref: "#/components/parameters/IdParam"
-      responses:
-        "204":
-          description: Registration deleted
-        "404":
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  /registrations/{id}/submit:
-    post:
-      operationId: submitRegistration
-      tags: [registrations]
-      summary: Submit a registration request for review
-      parameters:
-        - $ref: "#/components/parameters/IdParam"
-      responses:
-        "200":
-          description: Registration submitted
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/RegistrationRequest"
-        "400":
-          description: Cannot submit
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  /registrations/{id}/approve:
-    post:
-      operationId: approveRegistration
-      tags: [registrations]
-      summary: Approve a registration request
-      parameters:
-        - $ref: "#/components/parameters/IdParam"
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ReviewRegistrationBody"
-      responses:
-        "200":
-          description: Registration approved
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/RegistrationRequest"
-        "400":
-          description: Cannot approve
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  /registrations/{id}/reject:
-    post:
-      operationId: rejectRegistration
-      tags: [registrations]
-      summary: Reject a registration request
-      parameters:
-        - $ref: "#/components/parameters/IdParam"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ReviewRegistrationBody"
-      responses:
-        "200":
-          description: Registration rejected
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/RegistrationRequest"
-        "400":
-          description: Cannot reject
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ErrorRaspuns"
 
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   parameters:
     IdParam:
       name: id
@@ -726,636 +678,499 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
-    ErrorResponse:
+    ErrorRaspuns:
       type: object
       properties:
-        error:
+        eroare:
           type: string
-      required:
-        - error
+      required: [eroare]
 
-    # ── Company ──────────────────────────────────────────────────────────────
-    Company:
+    # ── Auth ──────────────────────────────────────────────────────────────────
+    Utilizator:
       type: object
       properties:
         id:
           type: integer
-        name:
+        email:
           type: string
-          description: Company name (Denumire firmă)
-        tradeName:
+          format: email
+        nume:
+          type: string
+        prenume:
+          type: string
+        telefon:
           type: ["string", "null"]
-          description: Trade name / brand name
-        legalForm:
+        rol:
           type: string
-          enum: [SRL, SA, SNC, SCS, RA, SRL_D]
-          description: Legal form of the company
-        cui:
-          type: ["string", "null"]
-          description: Unique registration code (CUI)
-        registrationNumber:
-          type: ["string", "null"]
-          description: Trade register number (J code)
-        registeredAddress:
-          type: string
-          description: Registered office address (Sediu social)
-        county:
-          type: string
-          description: County (Județ)
-        city:
-          type: string
-          description: City/town
-        postalCode:
-          type: ["string", "null"]
-          description: Postal code
-        caenCode:
-          type: string
-          description: Main activity CAEN code
-        caenDescription:
-          type: ["string", "null"]
-          description: Main activity description
-        shareCapital:
-          type: number
-          description: Share capital in RON
-        numberOfShares:
-          type: integer
-          description: Number of shares
-        shareValue:
-          type: number
-          description: Value per share in RON
-        status:
-          type: string
-          enum: [draft, pending, registered, rejected]
-        notes:
-          type: ["string", "null"]
-        createdAt:
+          enum: [client, admin]
+        creatLa:
           type: string
           format: date-time
-        updatedAt:
+        actualizatLa:
+          type: string
+          format: date-time
+      required: [id, email, nume, prenume, rol, creatLa, actualizatLa]
+
+    AuthRaspuns:
+      type: object
+      properties:
+        token:
+          type: string
+        utilizator:
+          $ref: "#/components/schemas/Utilizator"
+      required: [token, utilizator]
+
+    InregistrareBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        parola:
+          type: string
+          minLength: 8
+        nume:
+          type: string
+        prenume:
+          type: string
+        telefon:
+          type: ["string", "null"]
+      required: [email, parola, nume, prenume]
+
+    AutentificareBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        parola:
+          type: string
+      required: [email, parola]
+
+    UpdateProfilBody:
+      type: object
+      properties:
+        nume:
+          type: string
+        prenume:
+          type: string
+        telefon:
+          type: ["string", "null"]
+
+    # ── Dosare ────────────────────────────────────────────────────────────────
+    Dosar:
+      type: object
+      properties:
+        id:
+          type: integer
+        utilizatorId:
+          type: integer
+        denumireFirma:
+          type: string
+          description: Denumirea firmei
+        formaJuridica:
+          type: string
+          enum: [SRL, SA, SNC, SCS, RA, SRL_D]
+        judet:
+          type: ["string", "null"]
+        localitate:
+          type: ["string", "null"]
+        adresaSediu:
+          type: ["string", "null"]
+        codPostal:
+          type: ["string", "null"]
+        codCaenPrincipal:
+          type: ["string", "null"]
+          description: Codul CAEN al activității principale
+        descriereActivitate:
+          type: ["string", "null"]
+        capitalSocial:
+          type: ["number", "null"]
+        numarParti:
+          type: ["integer", "null"]
+          description: Număr de părți sociale
+        valoareParte:
+          type: ["number", "null"]
+          description: Valoarea unei părți sociale
+        pasCurent:
+          type: integer
+          description: "Pasul curent al wizard-ului (1-6)"
+          minimum: 1
+          maximum: 6
+        status:
+          type: string
+          enum: [ciorna, in_asteptare, in_procesare, aprobat, respins]
+        numarInregistrare:
+          type: ["string", "null"]
+          description: Numărul oficial de înregistrare (după aprobare)
+        cui:
+          type: ["string", "null"]
+          description: Codul Unic de Înregistrare
+        noteMentor:
+          type: ["string", "null"]
+        creatLa:
+          type: string
+          format: date-time
+        actualizatLa:
           type: string
           format: date-time
       required:
         - id
-        - name
-        - legalForm
-        - registeredAddress
-        - county
-        - city
-        - caenCode
-        - shareCapital
-        - numberOfShares
-        - shareValue
+        - utilizatorId
+        - denumireFirma
+        - formaJuridica
+        - pasCurent
         - status
-        - createdAt
-        - updatedAt
+        - creatLa
+        - actualizatLa
 
-    CompanyDetail:
+    DosarDetaliat:
       allOf:
-        - $ref: "#/components/schemas/Company"
+        - $ref: "#/components/schemas/Dosar"
         - type: object
           properties:
-            shareholders:
+            asociati:
               type: array
               items:
-                $ref: "#/components/schemas/Shareholder"
-            directors:
+                $ref: "#/components/schemas/Asociat"
+            plati:
               type: array
               items:
-                $ref: "#/components/schemas/Director"
-            documents:
-              type: array
-              items:
-                $ref: "#/components/schemas/Document"
-          required:
-            - shareholders
-            - directors
-            - documents
+                $ref: "#/components/schemas/Plata"
+          required: [asociati, plati]
 
-    CreateCompanyBody:
-      type: object
-      properties:
-        name:
-          type: string
-        tradeName:
-          type: ["string", "null"]
-        legalForm:
-          type: string
-          enum: [SRL, SA, SNC, SCS, RA, SRL_D]
-        registeredAddress:
-          type: string
-        county:
-          type: string
-        city:
-          type: string
-        postalCode:
-          type: ["string", "null"]
-        caenCode:
-          type: string
-        caenDescription:
-          type: ["string", "null"]
-        shareCapital:
-          type: number
-        numberOfShares:
-          type: integer
-        shareValue:
-          type: number
-        notes:
-          type: ["string", "null"]
-      required:
-        - name
-        - legalForm
-        - registeredAddress
-        - county
-        - city
-        - caenCode
-        - shareCapital
-        - numberOfShares
-        - shareValue
-
-    UpdateCompanyBody:
-      type: object
-      properties:
-        name:
-          type: string
-        tradeName:
-          type: ["string", "null"]
-        legalForm:
-          type: string
-          enum: [SRL, SA, SNC, SCS, RA, SRL_D]
-        cui:
-          type: ["string", "null"]
-        registrationNumber:
-          type: ["string", "null"]
-        registeredAddress:
-          type: string
-        county:
-          type: string
-        city:
-          type: string
-        postalCode:
-          type: ["string", "null"]
-        caenCode:
-          type: string
-        caenDescription:
-          type: ["string", "null"]
-        shareCapital:
-          type: number
-        numberOfShares:
-          type: integer
-        shareValue:
-          type: number
-        status:
-          type: string
-          enum: [draft, pending, registered, rejected]
-        notes:
-          type: ["string", "null"]
-
-    CompanyStats:
+    DosarStatistici:
       type: object
       properties:
         total:
           type: integer
-        byStatus:
+        peStatus:
           type: object
           properties:
-            draft:
+            ciorna:
               type: integer
-            pending:
+            in_asteptare:
               type: integer
-            registered:
+            in_procesare:
               type: integer
-            rejected:
+            aprobat:
               type: integer
-          required:
-            - draft
-            - pending
-            - registered
-            - rejected
-        byLegalForm:
+            respins:
+              type: integer
+          required: [ciorna, in_asteptare, in_procesare, aprobat, respins]
+        totalPlatiEfectuate:
+          type: number
+        dosareRecente:
           type: array
           items:
-            type: object
-            properties:
-              legalForm:
-                type: string
-              count:
-                type: integer
-            required:
-              - legalForm
-              - count
-        recentlyRegistered:
+            $ref: "#/components/schemas/Dosar"
+      required: [total, peStatus, totalPlatiEfectuate, dosareRecente]
+
+    CreateDosarBody:
+      type: object
+      properties:
+        denumireFirma:
+          type: string
+        formaJuridica:
+          type: string
+          enum: [SRL, SA, SNC, SCS, RA, SRL_D]
+        judet:
+          type: ["string", "null"]
+        localitate:
+          type: ["string", "null"]
+        adresaSediu:
+          type: ["string", "null"]
+        codPostal:
+          type: ["string", "null"]
+        codCaenPrincipal:
+          type: ["string", "null"]
+        descriereActivitate:
+          type: ["string", "null"]
+        capitalSocial:
+          type: ["number", "null"]
+        numarParti:
+          type: ["integer", "null"]
+        valoareParte:
+          type: ["number", "null"]
+      required: [denumireFirma, formaJuridica]
+
+    UpdateDosarBody:
+      type: object
+      properties:
+        denumireFirma:
+          type: string
+        formaJuridica:
+          type: string
+          enum: [SRL, SA, SNC, SCS, RA, SRL_D]
+        judet:
+          type: ["string", "null"]
+        localitate:
+          type: ["string", "null"]
+        adresaSediu:
+          type: ["string", "null"]
+        codPostal:
+          type: ["string", "null"]
+        codCaenPrincipal:
+          type: ["string", "null"]
+        descriereActivitate:
+          type: ["string", "null"]
+        capitalSocial:
+          type: ["number", "null"]
+        numarParti:
+          type: ["integer", "null"]
+        valoareParte:
+          type: ["number", "null"]
+        noteMentor:
+          type: ["string", "null"]
+        cui:
+          type: ["string", "null"]
+        numarInregistrare:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [ciorna, in_asteptare, in_procesare, aprobat, respins]
+
+    UpdatePasBody:
+      type: object
+      properties:
+        pas:
+          type: integer
+          minimum: 1
+          maximum: 6
+      required: [pas]
+
+    # ── Asociat ───────────────────────────────────────────────────────────────
+    Asociat:
+      type: object
+      properties:
+        id:
+          type: integer
+        dosarId:
+          type: integer
+        numeComplet:
+          type: string
+        cnp:
+          type: ["string", "null"]
+          description: Cod Numeric Personal
+        tipActIdentitate:
+          type: string
+          enum: [ci, pasaport, alta]
+        serieNumarActIdentitate:
+          type: ["string", "null"]
+        nationalitate:
+          type: string
+        adresa:
+          type: ["string", "null"]
+        numarParti:
+          type: integer
+          description: Număr de părți sociale deținute
+        procentDetinere:
+          type: number
+          description: Procentul din capitalul social (%)
+        aportCapital:
+          type: number
+          description: Aportul la capitalul social (RON)
+        estePersoanaJuridica:
+          type: boolean
+          description: "True dacă asociatul este persoană juridică"
+        cuiPersoanaJuridica:
+          type: ["string", "null"]
+          description: CUI dacă asociatul este persoană juridică
+        creatLa:
+          type: string
+          format: date-time
+        actualizatLa:
+          type: string
+          format: date-time
+      required:
+        - id
+        - dosarId
+        - numeComplet
+        - tipActIdentitate
+        - nationalitate
+        - numarParti
+        - procentDetinere
+        - aportCapital
+        - estePersoanaJuridica
+        - creatLa
+        - actualizatLa
+
+    CreateAsociatBody:
+      type: object
+      properties:
+        numeComplet:
+          type: string
+        cnp:
+          type: ["string", "null"]
+        tipActIdentitate:
+          type: string
+          enum: [ci, pasaport, alta]
+        serieNumarActIdentitate:
+          type: ["string", "null"]
+        nationalitate:
+          type: string
+        adresa:
+          type: ["string", "null"]
+        numarParti:
+          type: integer
+        procentDetinere:
+          type: number
+        aportCapital:
+          type: number
+        estePersoanaJuridica:
+          type: boolean
+        cuiPersoanaJuridica:
+          type: ["string", "null"]
+      required:
+        - numeComplet
+        - tipActIdentitate
+        - nationalitate
+        - numarParti
+        - procentDetinere
+        - aportCapital
+        - estePersoanaJuridica
+
+    UpdateAsociatBody:
+      type: object
+      properties:
+        numeComplet:
+          type: string
+        cnp:
+          type: ["string", "null"]
+        tipActIdentitate:
+          type: string
+          enum: [ci, pasaport, alta]
+        serieNumarActIdentitate:
+          type: ["string", "null"]
+        nationalitate:
+          type: string
+        adresa:
+          type: ["string", "null"]
+        numarParti:
+          type: integer
+        procentDetinere:
+          type: number
+        aportCapital:
+          type: number
+        estePersoanaJuridica:
+          type: boolean
+        cuiPersoanaJuridica:
+          type: ["string", "null"]
+
+    # ── Cod CAEN ─────────────────────────────────────────────────────────────
+    CodCaen:
+      type: object
+      properties:
+        cod:
+          type: string
+        denumire:
+          type: string
+        sectiune:
+          type: string
+        diviziune:
+          type: ["string", "null"]
+        grupa:
+          type: ["string", "null"]
+        clasa:
+          type: ["string", "null"]
+      required: [cod, denumire, sectiune]
+
+    CodCaenPaginat:
+      type: object
+      properties:
+        date:
           type: array
           items:
-            $ref: "#/components/schemas/Company"
-      required:
-        - total
-        - byStatus
-        - byLegalForm
-        - recentlyRegistered
+            $ref: "#/components/schemas/CodCaen"
+        total:
+          type: integer
+        pagina:
+          type: integer
+        perPagina:
+          type: integer
+        totalPagini:
+          type: integer
+      required: [date, total, pagina, perPagina, totalPagini]
 
-    # ── Shareholder ───────────────────────────────────────────────────────────
-    Shareholder:
+    # ── Plată ─────────────────────────────────────────────────────────────────
+    Plata:
       type: object
       properties:
         id:
           type: integer
-        companyId:
+        dosarId:
           type: integer
-        fullName:
-          type: string
-          description: Full name of the shareholder
-        cnp:
-          type: ["string", "null"]
-          description: Personal identification number (CNP) for individuals
-        idType:
-          type: string
-          enum: [ci, passport, company]
-          description: ID document type
-        idNumber:
-          type: ["string", "null"]
-          description: ID document number
-        nationality:
-          type: string
-        address:
-          type: ["string", "null"]
-        numberOfShares:
+        utilizatorId:
           type: integer
-          description: Number of shares held
-        sharePercentage:
+        suma:
           type: number
-          description: Percentage of shares owned
-        contribution:
-          type: number
-          description: Capital contribution in RON
-        isLegalEntity:
-          type: boolean
-          description: True if the shareholder is a company, false if individual
-        companyRegistrationNumber:
-          type: ["string", "null"]
-          description: Registration number if shareholder is a legal entity
-        createdAt:
+          description: Suma în RON
+        valuta:
           type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-      required:
-        - id
-        - companyId
-        - fullName
-        - idType
-        - nationality
-        - numberOfShares
-        - sharePercentage
-        - contribution
-        - isLegalEntity
-        - createdAt
-        - updatedAt
-
-    CreateShareholderBody:
-      type: object
-      properties:
-        fullName:
-          type: string
-        cnp:
-          type: ["string", "null"]
-        idType:
-          type: string
-          enum: [ci, passport, company]
-        idNumber:
-          type: ["string", "null"]
-        nationality:
-          type: string
-        address:
-          type: ["string", "null"]
-        numberOfShares:
-          type: integer
-        sharePercentage:
-          type: number
-        contribution:
-          type: number
-        isLegalEntity:
-          type: boolean
-        companyRegistrationNumber:
-          type: ["string", "null"]
-      required:
-        - fullName
-        - idType
-        - nationality
-        - numberOfShares
-        - sharePercentage
-        - contribution
-        - isLegalEntity
-
-    UpdateShareholderBody:
-      type: object
-      properties:
-        fullName:
-          type: string
-        cnp:
-          type: ["string", "null"]
-        idType:
-          type: string
-          enum: [ci, passport, company]
-        idNumber:
-          type: ["string", "null"]
-        nationality:
-          type: string
-        address:
-          type: ["string", "null"]
-        numberOfShares:
-          type: integer
-        sharePercentage:
-          type: number
-        contribution:
-          type: number
-        isLegalEntity:
-          type: boolean
-        companyRegistrationNumber:
-          type: ["string", "null"]
-
-    # ── Director ──────────────────────────────────────────────────────────────
-    Director:
-      type: object
-      properties:
-        id:
-          type: integer
-        companyId:
-          type: integer
-        fullName:
-          type: string
-        cnp:
-          type: ["string", "null"]
-        idType:
-          type: string
-          enum: [ci, passport]
-        idNumber:
-          type: ["string", "null"]
-        nationality:
-          type: string
-        address:
-          type: ["string", "null"]
-        role:
-          type: string
-          enum: [administrator, cenzor, auditor, asociat_unic]
-          description: Role of the director
-        mandateDurationYears:
-          type: ["integer", "null"]
-          description: Duration of mandate in years
-        mandateStartDate:
-          type: ["string", "null"]
-          format: date
-        mandateEndDate:
-          type: ["string", "null"]
-          format: date
-        isSoleAdministrator:
-          type: boolean
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-      required:
-        - id
-        - companyId
-        - fullName
-        - idType
-        - nationality
-        - role
-        - isSoleAdministrator
-        - createdAt
-        - updatedAt
-
-    CreateDirectorBody:
-      type: object
-      properties:
-        fullName:
-          type: string
-        cnp:
-          type: ["string", "null"]
-        idType:
-          type: string
-          enum: [ci, passport]
-        idNumber:
-          type: ["string", "null"]
-        nationality:
-          type: string
-        address:
-          type: ["string", "null"]
-        role:
-          type: string
-          enum: [administrator, cenzor, auditor, asociat_unic]
-        mandateDurationYears:
-          type: ["integer", "null"]
-        mandateStartDate:
-          type: ["string", "null"]
-          format: date
-        mandateEndDate:
-          type: ["string", "null"]
-          format: date
-        isSoleAdministrator:
-          type: boolean
-      required:
-        - fullName
-        - idType
-        - nationality
-        - role
-        - isSoleAdministrator
-
-    UpdateDirectorBody:
-      type: object
-      properties:
-        fullName:
-          type: string
-        cnp:
-          type: ["string", "null"]
-        idType:
-          type: string
-          enum: [ci, passport]
-        idNumber:
-          type: ["string", "null"]
-        nationality:
-          type: string
-        address:
-          type: ["string", "null"]
-        role:
-          type: string
-          enum: [administrator, cenzor, auditor, asociat_unic]
-        mandateDurationYears:
-          type: ["integer", "null"]
-        mandateStartDate:
-          type: ["string", "null"]
-          format: date
-        mandateEndDate:
-          type: ["string", "null"]
-          format: date
-        isSoleAdministrator:
-          type: boolean
-
-    # ── Document ──────────────────────────────────────────────────────────────
-    Document:
-      type: object
-      properties:
-        id:
-          type: integer
-        companyId:
-          type: integer
-        documentType:
-          type: string
-          enum:
-            [
-              act_constitutiv,
-              statut,
-              contract_sediu,
-              dovada_sediu,
-              cazier_fiscal,
-              cazier_judiciar,
-              specimen_semnatura,
-              declaratie_asociat,
-              declaratie_beneficiar,
-              cerere_inregistrare,
-              alte_documente,
-            ]
-          description: Type of registration document
-        fileName:
-          type: ["string", "null"]
-          description: File name of the uploaded document
-        fileUrl:
-          type: ["string", "null"]
-          description: URL to access the file
+          default: RON
         status:
           type: string
-          enum: [pending, uploaded, approved, rejected]
-        notes:
+          enum: [in_asteptare, platit, esuat, rambursat]
+        metodaPlata:
           type: ["string", "null"]
-        createdAt:
+          enum: [card, transfer_bancar, numerar, null]
+        referintaPlata:
+          type: ["string", "null"]
+        descriere:
+          type: ["string", "null"]
+        dataPlata:
+          type: ["string", "null"]
+          format: date-time
+        creatLa:
           type: string
           format: date-time
-        updatedAt:
+        actualizatLa:
           type: string
           format: date-time
       required:
         - id
-        - companyId
-        - documentType
+        - dosarId
+        - utilizatorId
+        - suma
+        - valuta
         - status
-        - createdAt
-        - updatedAt
+        - creatLa
+        - actualizatLa
 
-    CreateDocumentBody:
+    CreatePlataBody:
       type: object
       properties:
-        documentType:
+        dosarId:
+          type: integer
+        suma:
+          type: number
+        valuta:
           type: string
-          enum:
-            [
-              act_constitutiv,
-              statut,
-              contract_sediu,
-              dovada_sediu,
-              cazier_fiscal,
-              cazier_judiciar,
-              specimen_semnatura,
-              declaratie_asociat,
-              declaratie_beneficiar,
-              cerere_inregistrare,
-              alte_documente,
-            ]
-        fileName:
+          default: RON
+        metodaPlata:
           type: ["string", "null"]
-        fileUrl:
+          enum: [card, transfer_bancar, numerar, null]
+        referintaPlata:
           type: ["string", "null"]
-        notes:
+        descriere:
           type: ["string", "null"]
-      required:
-        - documentType
+      required: [dosarId, suma]
 
-    UpdateDocumentBody:
+    UpdatePlataBody:
       type: object
       properties:
-        fileName:
-          type: ["string", "null"]
-        fileUrl:
-          type: ["string", "null"]
         status:
           type: string
-          enum: [pending, uploaded, approved, rejected]
-        notes:
+          enum: [in_asteptare, platit, esuat, rambursat]
+        referintaPlata:
           type: ["string", "null"]
-
-    # ── Registration Request ──────────────────────────────────────────────────
-    RegistrationRequest:
-      type: object
-      properties:
-        id:
-          type: integer
-        companyId:
-          type: integer
-        companyName:
+        descriere:
           type: ["string", "null"]
-        status:
-          type: string
-          enum: [draft, submitted, under_review, approved, rejected]
-        submittedAt:
+        metodaPlata:
+          type: ["string", "null"]
+          enum: [card, transfer_bancar, numerar, null]
+        dataPlata:
           type: ["string", "null"]
           format: date-time
-        reviewedAt:
-          type: ["string", "null"]
-          format: date-time
-        reviewerNotes:
-          type: ["string", "null"]
-        estimatedCompletionDate:
-          type: ["string", "null"]
-          format: date
-        referenceNumber:
-          type: ["string", "null"]
-          description: Official reference number assigned after submission
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-      required:
-        - id
-        - companyId
-        - status
-        - createdAt
-        - updatedAt
-
-    CreateRegistrationBody:
-      type: object
-      properties:
-        companyId:
-          type: integer
-        estimatedCompletionDate:
-          type: ["string", "null"]
-          format: date
-      required:
-        - companyId
-
-    UpdateRegistrationBody:
-      type: object
-      properties:
-        estimatedCompletionDate:
-          type: ["string", "null"]
-          format: date
-        reviewerNotes:
-          type: ["string", "null"]
-        referenceNumber:
-          type: ["string", "null"]
-
-    ReviewRegistrationBody:
-      type: object
-      properties:
-        reviewerNotes:
-          type: ["string", "null"]
-        referenceNumber:
-          type: ["string", "null"]
-        estimatedCompletionDate:
-          type: ["string", "null"]
-          format: date
