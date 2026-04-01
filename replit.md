@@ -48,6 +48,18 @@ Every package extends `tsconfig.base.json` which sets `composite: true`. The roo
 - `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages that define it
 - `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
 
+## JustIdeas — Romanian Company Registration Platform
+
+The API server implements a full company registration backend for Romanian companies. Key domains:
+
+- **Companies** — CRUD for companies with legal forms (SRL, SA, SNC, SCS, RA, SRL_D), CUI, CAEN codes, share capital, status lifecycle (draft → pending → registered/rejected)
+- **Shareholders (Asociați)** — manage shareholders per company (natural/legal persons, CNP, shares, contribution)
+- **Directors (Administratori)** — manage directors per company (role: administrator, cenzor, auditor, asociat_unic, mandate dates)
+- **Documents** — track registration documents by type (act_constitutiv, cazier_fiscal, etc.), status (pending/uploaded/approved/rejected)
+- **Registration Requests** — manage submission workflow with status transitions (draft → submitted → approved/rejected), with side effects on company status
+
+All routes live under `/api`. The OpenAPI spec in `lib/api-spec/openapi.yaml` is the source of truth.
+
 ## Packages
 
 ### `artifacts/api-server` (`@workspace/api-server`)

@@ -3,13 +3,24 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: JustIdeas - Romanian Company Registration Platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: companies
+    description: Company management
+  - name: shareholders
+    description: Shareholder management
+  - name: directors
+    description: Director management
+  - name: documents
+    description: Document management
+  - name: registrations
+    description: Registration request management
+
 paths:
   /healthz:
     get:
@@ -24,7 +35,691 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── Companies ──────────────────────────────────────────────────────────────
+  /companies:
+    get:
+      operationId: listCompanies
+      tags: [companies]
+      summary: List all companies
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [draft, pending, registered, rejected]
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of companies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Company"
+
+    post:
+      operationId: createCompany
+      tags: [companies]
+      summary: Create a new company
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCompanyBody"
+      responses:
+        "201":
+          description: Company created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Company"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /companies/{id}:
+    get:
+      operationId: getCompany
+      tags: [companies]
+      summary: Get a company by ID
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Company found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanyDetail"
+        "404":
+          description: Company not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    patch:
+      operationId: updateCompany
+      tags: [companies]
+      summary: Update a company
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCompanyBody"
+      responses:
+        "200":
+          description: Company updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Company"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Company not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: deleteCompany
+      tags: [companies]
+      summary: Delete a company
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "204":
+          description: Company deleted
+        "404":
+          description: Company not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /companies/stats:
+    get:
+      operationId: getCompanyStats
+      tags: [companies]
+      summary: Get dashboard statistics for companies
+      responses:
+        "200":
+          description: Company statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanyStats"
+
+  # ── Shareholders ───────────────────────────────────────────────────────────
+  /companies/{id}/shareholders:
+    get:
+      operationId: listShareholders
+      tags: [shareholders]
+      summary: List shareholders of a company
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: List of shareholders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Shareholder"
+        "404":
+          description: Company not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      operationId: addShareholder
+      tags: [shareholders]
+      summary: Add a shareholder to a company
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateShareholderBody"
+      responses:
+        "201":
+          description: Shareholder added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shareholder"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Company not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /companies/{id}/shareholders/{shareholderId}:
+    patch:
+      operationId: updateShareholder
+      tags: [shareholders]
+      summary: Update a shareholder
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+        - name: shareholderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateShareholderBody"
+      responses:
+        "200":
+          description: Shareholder updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shareholder"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: removeShareholder
+      tags: [shareholders]
+      summary: Remove a shareholder from a company
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+        - name: shareholderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Shareholder removed
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Directors ──────────────────────────────────────────────────────────────
+  /companies/{id}/directors:
+    get:
+      operationId: listDirectors
+      tags: [directors]
+      summary: List directors of a company
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: List of directors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Director"
+        "404":
+          description: Company not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      operationId: addDirector
+      tags: [directors]
+      summary: Add a director to a company
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDirectorBody"
+      responses:
+        "201":
+          description: Director added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Director"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Company not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /companies/{id}/directors/{directorId}:
+    patch:
+      operationId: updateDirector
+      tags: [directors]
+      summary: Update a director
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+        - name: directorId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDirectorBody"
+      responses:
+        "200":
+          description: Director updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Director"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: removeDirector
+      tags: [directors]
+      summary: Remove a director from a company
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+        - name: directorId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Director removed
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Documents ──────────────────────────────────────────────────────────────
+  /companies/{id}/documents:
+    get:
+      operationId: listDocuments
+      tags: [documents]
+      summary: List documents for a company
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: List of documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Document"
+        "404":
+          description: Company not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      operationId: addDocument
+      tags: [documents]
+      summary: Add a document to a company
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDocumentBody"
+      responses:
+        "201":
+          description: Document added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Company not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /companies/{id}/documents/{documentId}:
+    patch:
+      operationId: updateDocument
+      tags: [documents]
+      summary: Update a document status or metadata
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDocumentBody"
+      responses:
+        "200":
+          description: Document updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: deleteDocument
+      tags: [documents]
+      summary: Delete a document
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Document deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Registration Requests ──────────────────────────────────────────────────
+  /registrations:
+    get:
+      operationId: listRegistrations
+      tags: [registrations]
+      summary: List all registration requests
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [draft, submitted, under_review, approved, rejected]
+        - name: companyId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of registration requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RegistrationRequest"
+
+    post:
+      operationId: createRegistration
+      tags: [registrations]
+      summary: Create a registration request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRegistrationBody"
+      responses:
+        "201":
+          description: Registration request created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegistrationRequest"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /registrations/{id}:
+    get:
+      operationId: getRegistration
+      tags: [registrations]
+      summary: Get a registration request by ID
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Registration request found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegistrationRequest"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    patch:
+      operationId: updateRegistration
+      tags: [registrations]
+      summary: Update a registration request
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRegistrationBody"
+      responses:
+        "200":
+          description: Registration updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegistrationRequest"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: deleteRegistration
+      tags: [registrations]
+      summary: Delete a registration request
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "204":
+          description: Registration deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /registrations/{id}/submit:
+    post:
+      operationId: submitRegistration
+      tags: [registrations]
+      summary: Submit a registration request for review
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Registration submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegistrationRequest"
+        "400":
+          description: Cannot submit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /registrations/{id}/approve:
+    post:
+      operationId: approveRegistration
+      tags: [registrations]
+      summary: Approve a registration request
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewRegistrationBody"
+      responses:
+        "200":
+          description: Registration approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegistrationRequest"
+        "400":
+          description: Cannot approve
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /registrations/{id}/reject:
+    post:
+      operationId: rejectRegistration
+      tags: [registrations]
+      summary: Reject a registration request
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewRegistrationBody"
+      responses:
+        "200":
+          description: Registration rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegistrationRequest"
+        "400":
+          description: Cannot reject
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +729,633 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    # ── Company ──────────────────────────────────────────────────────────────
+    Company:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          description: Company name (Denumire firmă)
+        tradeName:
+          type: ["string", "null"]
+          description: Trade name / brand name
+        legalForm:
+          type: string
+          enum: [SRL, SA, SNC, SCS, RA, SRL_D]
+          description: Legal form of the company
+        cui:
+          type: ["string", "null"]
+          description: Unique registration code (CUI)
+        registrationNumber:
+          type: ["string", "null"]
+          description: Trade register number (J code)
+        registeredAddress:
+          type: string
+          description: Registered office address (Sediu social)
+        county:
+          type: string
+          description: County (Județ)
+        city:
+          type: string
+          description: City/town
+        postalCode:
+          type: ["string", "null"]
+          description: Postal code
+        caenCode:
+          type: string
+          description: Main activity CAEN code
+        caenDescription:
+          type: ["string", "null"]
+          description: Main activity description
+        shareCapital:
+          type: number
+          description: Share capital in RON
+        numberOfShares:
+          type: integer
+          description: Number of shares
+        shareValue:
+          type: number
+          description: Value per share in RON
+        status:
+          type: string
+          enum: [draft, pending, registered, rejected]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - legalForm
+        - registeredAddress
+        - county
+        - city
+        - caenCode
+        - shareCapital
+        - numberOfShares
+        - shareValue
+        - status
+        - createdAt
+        - updatedAt
+
+    CompanyDetail:
+      allOf:
+        - $ref: "#/components/schemas/Company"
+        - type: object
+          properties:
+            shareholders:
+              type: array
+              items:
+                $ref: "#/components/schemas/Shareholder"
+            directors:
+              type: array
+              items:
+                $ref: "#/components/schemas/Director"
+            documents:
+              type: array
+              items:
+                $ref: "#/components/schemas/Document"
+          required:
+            - shareholders
+            - directors
+            - documents
+
+    CreateCompanyBody:
+      type: object
+      properties:
+        name:
+          type: string
+        tradeName:
+          type: ["string", "null"]
+        legalForm:
+          type: string
+          enum: [SRL, SA, SNC, SCS, RA, SRL_D]
+        registeredAddress:
+          type: string
+        county:
+          type: string
+        city:
+          type: string
+        postalCode:
+          type: ["string", "null"]
+        caenCode:
+          type: string
+        caenDescription:
+          type: ["string", "null"]
+        shareCapital:
+          type: number
+        numberOfShares:
+          type: integer
+        shareValue:
+          type: number
+        notes:
+          type: ["string", "null"]
+      required:
+        - name
+        - legalForm
+        - registeredAddress
+        - county
+        - city
+        - caenCode
+        - shareCapital
+        - numberOfShares
+        - shareValue
+
+    UpdateCompanyBody:
+      type: object
+      properties:
+        name:
+          type: string
+        tradeName:
+          type: ["string", "null"]
+        legalForm:
+          type: string
+          enum: [SRL, SA, SNC, SCS, RA, SRL_D]
+        cui:
+          type: ["string", "null"]
+        registrationNumber:
+          type: ["string", "null"]
+        registeredAddress:
+          type: string
+        county:
+          type: string
+        city:
+          type: string
+        postalCode:
+          type: ["string", "null"]
+        caenCode:
+          type: string
+        caenDescription:
+          type: ["string", "null"]
+        shareCapital:
+          type: number
+        numberOfShares:
+          type: integer
+        shareValue:
+          type: number
+        status:
+          type: string
+          enum: [draft, pending, registered, rejected]
+        notes:
+          type: ["string", "null"]
+
+    CompanyStats:
+      type: object
+      properties:
+        total:
+          type: integer
+        byStatus:
+          type: object
+          properties:
+            draft:
+              type: integer
+            pending:
+              type: integer
+            registered:
+              type: integer
+            rejected:
+              type: integer
+          required:
+            - draft
+            - pending
+            - registered
+            - rejected
+        byLegalForm:
+          type: array
+          items:
+            type: object
+            properties:
+              legalForm:
+                type: string
+              count:
+                type: integer
+            required:
+              - legalForm
+              - count
+        recentlyRegistered:
+          type: array
+          items:
+            $ref: "#/components/schemas/Company"
+      required:
+        - total
+        - byStatus
+        - byLegalForm
+        - recentlyRegistered
+
+    # ── Shareholder ───────────────────────────────────────────────────────────
+    Shareholder:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        fullName:
+          type: string
+          description: Full name of the shareholder
+        cnp:
+          type: ["string", "null"]
+          description: Personal identification number (CNP) for individuals
+        idType:
+          type: string
+          enum: [ci, passport, company]
+          description: ID document type
+        idNumber:
+          type: ["string", "null"]
+          description: ID document number
+        nationality:
+          type: string
+        address:
+          type: ["string", "null"]
+        numberOfShares:
+          type: integer
+          description: Number of shares held
+        sharePercentage:
+          type: number
+          description: Percentage of shares owned
+        contribution:
+          type: number
+          description: Capital contribution in RON
+        isLegalEntity:
+          type: boolean
+          description: True if the shareholder is a company, false if individual
+        companyRegistrationNumber:
+          type: ["string", "null"]
+          description: Registration number if shareholder is a legal entity
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - companyId
+        - fullName
+        - idType
+        - nationality
+        - numberOfShares
+        - sharePercentage
+        - contribution
+        - isLegalEntity
+        - createdAt
+        - updatedAt
+
+    CreateShareholderBody:
+      type: object
+      properties:
+        fullName:
+          type: string
+        cnp:
+          type: ["string", "null"]
+        idType:
+          type: string
+          enum: [ci, passport, company]
+        idNumber:
+          type: ["string", "null"]
+        nationality:
+          type: string
+        address:
+          type: ["string", "null"]
+        numberOfShares:
+          type: integer
+        sharePercentage:
+          type: number
+        contribution:
+          type: number
+        isLegalEntity:
+          type: boolean
+        companyRegistrationNumber:
+          type: ["string", "null"]
+      required:
+        - fullName
+        - idType
+        - nationality
+        - numberOfShares
+        - sharePercentage
+        - contribution
+        - isLegalEntity
+
+    UpdateShareholderBody:
+      type: object
+      properties:
+        fullName:
+          type: string
+        cnp:
+          type: ["string", "null"]
+        idType:
+          type: string
+          enum: [ci, passport, company]
+        idNumber:
+          type: ["string", "null"]
+        nationality:
+          type: string
+        address:
+          type: ["string", "null"]
+        numberOfShares:
+          type: integer
+        sharePercentage:
+          type: number
+        contribution:
+          type: number
+        isLegalEntity:
+          type: boolean
+        companyRegistrationNumber:
+          type: ["string", "null"]
+
+    # ── Director ──────────────────────────────────────────────────────────────
+    Director:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        fullName:
+          type: string
+        cnp:
+          type: ["string", "null"]
+        idType:
+          type: string
+          enum: [ci, passport]
+        idNumber:
+          type: ["string", "null"]
+        nationality:
+          type: string
+        address:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [administrator, cenzor, auditor, asociat_unic]
+          description: Role of the director
+        mandateDurationYears:
+          type: ["integer", "null"]
+          description: Duration of mandate in years
+        mandateStartDate:
+          type: ["string", "null"]
+          format: date
+        mandateEndDate:
+          type: ["string", "null"]
+          format: date
+        isSoleAdministrator:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - companyId
+        - fullName
+        - idType
+        - nationality
+        - role
+        - isSoleAdministrator
+        - createdAt
+        - updatedAt
+
+    CreateDirectorBody:
+      type: object
+      properties:
+        fullName:
+          type: string
+        cnp:
+          type: ["string", "null"]
+        idType:
+          type: string
+          enum: [ci, passport]
+        idNumber:
+          type: ["string", "null"]
+        nationality:
+          type: string
+        address:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [administrator, cenzor, auditor, asociat_unic]
+        mandateDurationYears:
+          type: ["integer", "null"]
+        mandateStartDate:
+          type: ["string", "null"]
+          format: date
+        mandateEndDate:
+          type: ["string", "null"]
+          format: date
+        isSoleAdministrator:
+          type: boolean
+      required:
+        - fullName
+        - idType
+        - nationality
+        - role
+        - isSoleAdministrator
+
+    UpdateDirectorBody:
+      type: object
+      properties:
+        fullName:
+          type: string
+        cnp:
+          type: ["string", "null"]
+        idType:
+          type: string
+          enum: [ci, passport]
+        idNumber:
+          type: ["string", "null"]
+        nationality:
+          type: string
+        address:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [administrator, cenzor, auditor, asociat_unic]
+        mandateDurationYears:
+          type: ["integer", "null"]
+        mandateStartDate:
+          type: ["string", "null"]
+          format: date
+        mandateEndDate:
+          type: ["string", "null"]
+          format: date
+        isSoleAdministrator:
+          type: boolean
+
+    # ── Document ──────────────────────────────────────────────────────────────
+    Document:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        documentType:
+          type: string
+          enum:
+            [
+              act_constitutiv,
+              statut,
+              contract_sediu,
+              dovada_sediu,
+              cazier_fiscal,
+              cazier_judiciar,
+              specimen_semnatura,
+              declaratie_asociat,
+              declaratie_beneficiar,
+              cerere_inregistrare,
+              alte_documente,
+            ]
+          description: Type of registration document
+        fileName:
+          type: ["string", "null"]
+          description: File name of the uploaded document
+        fileUrl:
+          type: ["string", "null"]
+          description: URL to access the file
+        status:
+          type: string
+          enum: [pending, uploaded, approved, rejected]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - companyId
+        - documentType
+        - status
+        - createdAt
+        - updatedAt
+
+    CreateDocumentBody:
+      type: object
+      properties:
+        documentType:
+          type: string
+          enum:
+            [
+              act_constitutiv,
+              statut,
+              contract_sediu,
+              dovada_sediu,
+              cazier_fiscal,
+              cazier_judiciar,
+              specimen_semnatura,
+              declaratie_asociat,
+              declaratie_beneficiar,
+              cerere_inregistrare,
+              alte_documente,
+            ]
+        fileName:
+          type: ["string", "null"]
+        fileUrl:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+      required:
+        - documentType
+
+    UpdateDocumentBody:
+      type: object
+      properties:
+        fileName:
+          type: ["string", "null"]
+        fileUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, uploaded, approved, rejected]
+        notes:
+          type: ["string", "null"]
+
+    # ── Registration Request ──────────────────────────────────────────────────
+    RegistrationRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        companyName:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [draft, submitted, under_review, approved, rejected]
+        submittedAt:
+          type: ["string", "null"]
+          format: date-time
+        reviewedAt:
+          type: ["string", "null"]
+          format: date-time
+        reviewerNotes:
+          type: ["string", "null"]
+        estimatedCompletionDate:
+          type: ["string", "null"]
+          format: date
+        referenceNumber:
+          type: ["string", "null"]
+          description: Official reference number assigned after submission
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - companyId
+        - status
+        - createdAt
+        - updatedAt
+
+    CreateRegistrationBody:
+      type: object
+      properties:
+        companyId:
+          type: integer
+        estimatedCompletionDate:
+          type: ["string", "null"]
+          format: date
+      required:
+        - companyId
+
+    UpdateRegistrationBody:
+      type: object
+      properties:
+        estimatedCompletionDate:
+          type: ["string", "null"]
+          format: date
+        reviewerNotes:
+          type: ["string", "null"]
+        referenceNumber:
+          type: ["string", "null"]
+
+    ReviewRegistrationBody:
+      type: object
+      properties:
+        reviewerNotes:
+          type: ["string", "null"]
+        referenceNumber:
+          type: ["string", "null"]
+        estimatedCompletionDate:
+          type: ["string", "null"]
+          format: date

@@ -5,7 +5,9 @@
  * JustIdeas - Romanian Company Registration Platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { ListCompaniesStatus } from "./listCompaniesStatus";
 
-export interface HealthStatus {
-  status: string;
-}
+export type ListCompaniesParams = {
+  status?: ListCompaniesStatus;
+  search?: string;
+};
